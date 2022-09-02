@@ -1,0 +1,169 @@
+Q. VOTING APP -DEMO practical
+
+Commands : 
+	git clone https://github.com/ashishrpandey/example-voting-app
+	cd example-voting-app/
+	cd k8s-specifications/
+	kubectl apply -f . 
+	kubectl get svc
+
+1)delete vote pod :
+	kubectl delete pod vote-94849dc97-ww5b9
+
+[root@ip-172-31-14-16 k8s-specifications]# kubectl delete pod vote-94849dc97-ww5b9
+pod "vote-94849dc97-ww5b9" deleted
+
+	kubectl get pod
+
+Observations : 
+	new container get created
+	still voting app is accessible
+	no problem in no. of votes
+	voting app didn't have anything to store so
+	voting app, redis app, worker app, db app and result app worked fine
+	for large application for continuity we can scale the deploymen
+
+2) delete worker pod 
+[root@ip-172-31-14-16 k8s-specifications]# kubectl delete pod worker-dd46d7584-gxr7x
+[root@ip-172-31-14-16 k8s-specifications]#kubectl get pod
+[root@ip-172-31-14-16 k8s-specifications]# kubectl logs worker-dd46d7584-psdb6
+Connected to db
+Found redis at 10.108.179.191
+Connecting to redis
+
+Observations : 
+	still voting app is accessible
+	no problem in no. of votes
+	worker app able to pull the data
+	system flow is not disturbed
+	voting app, redis app, worker app, db app and result app worked fine
+	while new worker app is coming logs got deleted	
+
+3) delete db pod 	
+[root@ip-172-31-14-16 k8s-specifications]# kubectl delete pod db-b54cd94f4-tqf9v
+pod "db-b54cd94f4-tqf9v" deleted
+
+kubectl get pod
+
+[root@ip-172-31-14-16 k8s-specifications]# kubectl logs db-b54cd94f4-w87pd
+The files belonging to this database system will be owned by user "postgres".
+This user must also own the server process.
+
+The database cluster will be initialized with locale "en_US.utf8".
+The default database encoding has accordingly been set to "UTF8".
+The default text search configuration will be set to "english".
+
+Data page checksums are disabled.
+
+fixing permissions on existing directory /var/lib/postgresql/data ... ok
+creating subdirectories ... ok
+selecting default max_connections ... 100
+selecting default shared_buffers ... 128MB
+creating configuration files ... ok
+creating template1 database in /var/lib/postgresql/data/base/1 ... ok
+initializing pg_authid ... ok
+setting password ... ok
+initializing dependencies ... ok
+creating system views ... ok
+loading system objects' descriptions ... ok
+creating collations ... ok
+creating conversions ... ok
+creating dictionaries ... ok
+setting privileges on built-in objects ... ok
+creating information schema ... ok
+loading PL/pgSQL server-side language ... ok
+vacuuming database template1 ... ok
+copying template1 to template0 ... ok
+copying template1 to postgres ... ok
+syncing data to disk ... ok
+
+WARNING: enabling "trust" authentication for local connections
+You can change this by editing pg_hba.conf or using the option -A, or
+--auth-local and --auth-host, the next time you run initdb.
+
+Success. You can now start the database server using:
+
+    postgres -D /var/lib/postgresql/data
+or
+    pg_ctl -D /var/lib/postgresql/data -l logfile start
+
+****************************************************
+WARNING: No password has been set for the database.
+         This will allow anyone with access to the
+         Postgres port to access your database. In
+         Docker's default configuration, this is
+         effectively any other container on the same
+         system.
+
+         Use "-e POSTGRES_PASSWORD=password" to set
+         it in "docker run".
+****************************************************
+waiting for server to start....LOG:  database system was shut down at 2022-09-02 17:56:19 UTC
+LOG:  MultiXact member wraparound protections are now enabled
+LOG:  database system is ready to accept connections
+LOG:  autovacuum launcher started
+ done
+server started
+
+/usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+
+LOG:  received fast shutdown request
+LOG:  aborting any active transactions
+LOG:  autovacuum launcher shutting down
+LOG:  shutting down
+waiting for server to shut down....LOG:  database system is shut down
+ done
+server stopped
+
+PostgreSQL init process complete; ready for start up.
+
+LOG:  database system was shut down at 2022-09-02 17:56:20 UTC
+LOG:  MultiXact member wraparound protections are now enabled
+LOG:  database system is ready to accept connections
+LOG:  autovacuum launcher started
+[root@ip-172-31-14-16 k8s-specifications]#
+
+
+Observations : 
+	impact on records, data got deleted
+	new db pod able to connect and do the insertion of votes
+	connection to result app is ended by db app
+	socket is not established
+	impact on result shown on screnn i.e result app
+
+4) To Start the resultant app => the socket should be established
+				i.e restart the result app
+				kubectl delete pod result-5d57b59f4b-vs2lb
+
+Observations : 
+	now result app is working , showing the results
+
+
+Kubernetes supports Stateless application
+take care of data, Kubernetes doesn't support data
+
+Voting App IP = http://13.215.250.93:31000/
+Result IP = http://13.215.250.93:31001/
+
+*snapshots of logs
+
+[root@ip-172-31-14-16 k8s-specifications]# kubectl get svc
+NAME     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+db       ClusterIP   10.103.142.64    <none>        5432/TCP         10m
+redis    ClusterIP   10.108.179.191   <none>        6379/TCP         10m
+result   NodePort    10.102.233.218   <none>        5001:31008/TCP   10m
+vote     NodePort    10.107.14.95     <none>        5000:31007/TCP   10m
+
+
+[root@ip-172-31-14-16 k8s-specifications]# kubectl logs worker-dd46d7584-psdb6
+Connected to db
+Found redis at 10.108.179.191
+Connecting to redis
+
+[root@ip-172-31-14-16 k8s-specifications]# kubectl logs result-5d57b59f4b-db9kq
+Fri, 02 Sep 2022 17:58:46 GMT body-parser deprecated bodyParser: use individual json/urlencoded middlewares at server.js:67:9
+Fri, 02 Sep 2022 17:58:46 GMT body-parser deprecated undefined extended: provide extended option at ../node_modules/body-parser/index.js:105:29
+App running on port 80
+Connected to db
+Error performing query: Error: This socket has been ended by the other party
+
