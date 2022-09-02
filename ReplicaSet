@@ -1,0 +1,9 @@
+Q. Write a common use-case, where you will use a daemon set instead of replica set.
+Ans:=
+Replica set is used to ensure that defined set of Pods are running all the time.
+daemon set is used to ensure that all nodes are running the copy of pod.
+daemon sets are commonly used for logging and monitoring for hosts. 
+for example a node needs a service which collects the vaccination data and stores into database.
+if you want to get data from each node, the best option is to schedule a container on every node that will gather these data from each individual node. 
+if you schedule one container to gather data from all nodes, you would run the risk that the node on which the service is running dies for whatever reason, and you’d lose data from the whole cluster. 
+but having a copy of the same container on every node will help.
